@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
     FILE* fp = NULL;
     
     if(argc < 4){
-        printf("Usage: %s <kernel_in> <kernel_out> <args>\n",argv[0]);
+        printf("Usage: %s <lockdownd_in> <lockdownd_out> <args>\n",argv[0]);
         printf("\t-u\t\tPatch _MKBDeviceUnlockedSinceBoot (iOS 8 Only)\n");
         printf("\t-l\t\tPatch _MKBGetDeviceLockState (iOS 8 Only)\n");
         
