@@ -32,51 +32,22 @@ int get__MKBDeviceUnlockedSinceBoot_patch_ios8(void* kernel_buf,size_t kernel_le
     uint8_t search[] = { 0x1F, 0x00, 0x00, 0x71, 0xE8, 0x17, 0x9F, 0x1A, 0x88, 0x02, 0x00, 0xB9, 0x60, 0x06, 0x00, 0x34 };
     void* ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(search) / sizeof(*search));
     if (!ent_loc) {
-        printf("%s: Could not find \"_MKBDeviceUnlockedSinceBoot\" patch\n",__FUNCTION__);
-        return -1;
-    }
-    printf("%s: Found \"_MKBDeviceUnlockedSinceBoot\" patch loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
-    addr_t xref_stuff = (addr_t)find_last_insn_matching_64(0, kernel_buf, kernel_len, ent_loc, insn_is_bl_64);
-    if(!xref_stuff) {
-        printf("%s: Could not find \"_MKBDeviceUnlockedSinceBoot\" xref\n",__FUNCTION__);
-        return -1;
-    }
-    addr_t br_addr = (addr_t)find_br_address_with_bl_64(0, kernel_buf, kernel_len, xref_stuff);
-    if(!br_addr) {
-        printf("%s: Could not find \"_MKBDeviceUnlockedSinceBoot\" br_addr\n",__FUNCTION__);
-        return -1;
-    }
-    // nop -> mov w0, 0x1
-    // ldr x16, _MKBDeviceUnlockedSinceBoot -> ret
-    // br x16
-    br_addr = (addr_t)GET_OFFSET(kernel_len, br_addr);
-    xref_stuff = br_addr - 0x4; // step back to ldr x16, _MKBDeviceUnlockedSinceBoot
-    xref_stuff = xref_stuff - 0x4; // step back to nop
-    printf("%s: Found \"_MKBDeviceUnlockedSinceBoot\" beg_func at %p\n\n", __FUNCTION__,GET_OFFSET(kernel_len,xref_stuff));
-    printf("%s: Patching \"_MKBDeviceUnlockedSinceBoot\" at %p\n\n", __FUNCTION__,GET_OFFSET(kernel_len,xref_stuff));
-    // 1 is yes, 0 is no
-    *(uint32_t *) (kernel_buf + xref_stuff) = 0x52800020; // mov w0, 0x1
-    *(uint32_t *) (kernel_buf + xref_stuff + 0x4) = 0xD65F03C0; // ret
-    return 0;
-}
-
-// iOS 7 arm64
-int get__MKBDeviceUnlockedSinceBoot_patch_ios7(void* kernel_buf,size_t kernel_len) {
-    // search 14 00 80 d2 1f 00 00 31 e8 17 9f 1a 68 02 00 b9 20 05 00 34
-    // .. heres one line before the ent_loc
-    // bl 0x100065e24
-    // .. and heres what we are searching for
-    // mov x20, #0
-    // cmn w0, #0
-    // cset w8, eq
-    // str w8, [x19]
-    // cbz w0, 0x100027ad4
-    // we need to step one line back and find the sub the bl is calling
-    uint8_t search[] = { 0x14, 0x00, 0x80, 0xd2, 0x1f, 0x00, 0x00, 0x31, 0xe8, 0x17, 0x9f, 0x1a, 0x68, 0x02, 0x00, 0xb9, 0x20, 0x05, 0x00, 0x34 };
-    void* ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(search) / sizeof(*search));
-    if (!ent_loc) {
-        printf("%s: Could not find \"_MKBDeviceUnlockedSinceBoot\" patch\n",__FUNCTION__);
-        return -1;
+        // search 14 00 80 d2 1f 00 00 31 e8 17 9f 1a 68 02 00 b9 20 05 00 34
+        // .. heres one line before the ent_loc
+        // bl 0x100065e24
+        // .. and heres what we are searching for
+        // mov x20, #0
+        // cmn w0, #0
+        // cset w8, eq
+        // str w8, [x19]
+        // cbz w0, 0x100027ad4
+        // we need to step one line back and find the sub the bl is calling
+        search[] = { 0x14, 0x00, 0x80, 0xd2, 0x1f, 0x00, 0x00, 0x31, 0xe8, 0x17, 0x9f, 0x1a, 0x68, 0x02, 0x00, 0xb9, 0x20, 0x05, 0x00, 0x34 };
+        ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(search) / sizeof(*search));
+        if (!ent_loc) {
+            printf("%s: Could not find \"_MKBDeviceUnlockedSinceBoot\" patch\n",__FUNCTION__);
+            return -1;
+        }
     }
     printf("%s: Found \"_MKBDeviceUnlockedSinceBoot\" patch loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
     addr_t xref_stuff = (addr_t)find_last_insn_matching_64(0, kernel_buf, kernel_len, ent_loc, insn_is_bl_64);
@@ -347,7 +318,6 @@ int main(int argc, char **argv) {
     for(int i=0;i<argc;i++) {
         if(strcmp(argv[i], "-u") == 0) {
             printf("Kernel: Adding _MKBDeviceUnlockedSinceBoot patch...\n");
-            get__MKBDeviceUnlockedSinceBoot_patch_ios7(kernel_buf,kernel_len);
             get__MKBDeviceUnlockedSinceBoot_patch_ios8(kernel_buf,kernel_len);
         }
         if(strcmp(argv[i], "-l") == 0) {
