@@ -355,7 +355,7 @@ int main(int argc, char **argv) {
         }
         if(strcmp(argv[i], "-g") == 0) {
             printf("Kernel: Adding _set_brick_state patch...\n");
-            get_set_brick_state_patch_ios7(kernel_buf,kernel_len);
+            get_set_brick_state_patch_ios8(kernel_buf,kernel_len);
         }
         if(strcmp(argv[i], "-b") == 0) {
             printf("Kernel: Adding ar_loadAndVerify patch...\n");
