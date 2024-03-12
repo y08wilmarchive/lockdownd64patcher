@@ -156,8 +156,8 @@ int get__MKBGetDeviceLockState_patch_ios8(void* kernel_buf,size_t kernel_len) {
     return 0;
 }
 
-// iOS 7 arm64
-int get_set_brick_state_patch_ios7(void* kernel_buf,size_t kernel_len) {
+// iOS 8 arm64
+int get_set_brick_state_patch_ios8(void* kernel_buf,size_t kernel_len) {
     printf("%s: Entering ...\n",__FUNCTION__);
     // search "_set_brick_state" str
     // ... and heres some notable lines of code before that
@@ -197,34 +197,33 @@ int get_set_brick_state_patch_ios7(void* kernel_buf,size_t kernel_len) {
 }
 
 // iOS 8 arm64
-int get_dealwith_activation_patch_ios8(void* kernel_buf,size_t kernel_len) {
+int get_ar_loadAndVerify_patch_ios8(void* kernel_buf,size_t kernel_len) {
     printf("%s: Entering ...\n",__FUNCTION__);
-    // search E1 63 00 91 E2 53 00 91 E0 03 13 AA
-    // add x1, sp, #0x18
-    // add x2, sp, #0x14
-    // mov x0, x19
-    // ... and heres two notable lines of code after that
-    // bl 0x10000caa4
-    // cbz w0, 0x10000c968
-    uint8_t search[] = { 0xE1, 0x63, 0x00, 0x91, 0xE2, 0x53, 0x00, 0x91, 0xE0, 0x03, 0x13, 0xAA };
-    void* ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(search) / sizeof(*search));
-    if (!ent_loc) {
-        printf("%s: Could not find \"dealwith_activation\" patch\n",__FUNCTION__);
+    char* str = "ar_loadAndVerify";
+    void* ent_loc = memmem(kernel_buf, kernel_len, str, sizeof(str));
+    if(!ent_loc) {
+        printf("%s: Could not find \"ar_loadAndVerify\" string\n",__FUNCTION__);
         return -1;
     }
-    printf("%s: Found \"dealwith_activation\" patch loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
-    addr_t xref_stuff = (addr_t)GET_OFFSET(kernel_len, ent_loc);
-    printf("%s: Found \"dealwith_activation\" xref at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
-    printf("%s: Patching \"dealwith_activation\" at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
+    printf("%s: Found \"ar_loadAndVerify\" str loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
+    addr_t xref_stuff = xref64(kernel_buf,0,kernel_len,(addr_t)GET_OFFSET(kernel_len, ent_loc));
+    if(!xref_stuff) {
+       printf("%s: Could not find \"ar_loadAndVerify\" xref\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"ar_loadAndVerify\" xref at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
+    addr_t beg_func = bof64(kernel_buf,0,xref_stuff);
+    if(!beg_func) {
+       printf("%s: Could not find \"ar_loadAndVerify\" funcbegin insn\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Patching \"ar_loadAndVerify\" at %p\n\n", __FUNCTION__,(void*)(beg_func));
     // 0xD503201F is nop
     // https://cryptii.com/pipes/integer-encoder
     // if you convert 1f2003D5 to a 32 bit unsigned integer in little endian https://archive.is/22JSe
-    // you will get d503201f as a result, which can be used after the = sign to make this a nop
-    // but this patch requires bl 0x10000caa4 to be mov w0, 0x1 which is 0x20 0x00 0x80 0x52 or 0x52800020 in little endian
-    xref_stuff = xref_stuff + 0x4;
-    xref_stuff = xref_stuff + 0x4;
-    xref_stuff = xref_stuff + 0x4;
-    *(uint32_t *) (kernel_buf + xref_stuff) = 0x52800020;
+    // you will get d503201f as a result
+    *(uint32_t *) (kernel_buf + beg_func) = 0x52800020; // mov w0, 0x1
+    *(uint32_t *) (kernel_buf + beg_func + 0x4) = 0xD65F03C0; // ret
     return 0;
 }
 
@@ -300,10 +299,10 @@ int main(int argc, char **argv) {
         printf("Usage: %s <lockdownd_in> <lockdownd_out> <args>\n",argv[0]);
         printf("\t-u\t\tPatch _MKBDeviceUnlockedSinceBoot (iOS 7& 8 Only)\n");
         printf("\t-l\t\tPatch _MKBGetDeviceLockState (iOS 7& 8 Only)\n");
-        printf("\t-g\t\tPatch _set_brick_state (iOS 7 Only)\n");
-        printf("\t-b\t\tPatch dealwith_activation (iOS 8 Only)\n");
-        printf("\t-c\t\tPatch handle_deactivate (iOS 8 Only)\n");
-        printf("\t-d\t\tPatch check_build_expired (iOS 8 Only)\n");
+        printf("\t-g\t\tPatch _set_brick_state (iOS 7& 8 Only)\n");
+        printf("\t-b\t\tPatch dealwith_activation (iOS 7& 8 Only)\n");
+        printf("\t-c\t\tPatch handle_deactivate (iOS 7& 8 Only)\n");
+        printf("\t-d\t\tPatch check_build_expired (iOS 7& 8 Only)\n");
         return 0;
     }
     
