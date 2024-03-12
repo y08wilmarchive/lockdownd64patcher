@@ -60,14 +60,57 @@ int get__MKBDeviceUnlockedSinceBoot_patch_ios8(void* kernel_buf,size_t kernel_le
     return 0;
 }
 
+// iOS 7 arm64
+int get__MKBDeviceUnlockedSinceBoot_patch_ios7(void* kernel_buf,size_t kernel_len) {
+    // search 14 00 80 d2 1f 00 00 31 e8 17 9f 1a 68 02 00 b9 20 05 00 34
+    // .. heres one line before the ent_loc
+    // bl 0x100065e24
+    // .. and heres what we are searching for
+    // mov x20, #0
+    // cmn w0, #0
+    // cset w8, eq
+    // str w8, [x19]
+    // cbz w0, 0x100027ad4
+    // we need to step one line back and find the sub the bl is calling
+    uint8_t search[] = { 0x14, 0x00, 0x80, 0xd2, 0x1f, 0x00, 0x00, 0x31, 0xe8, 0x17, 0x9f, 0x1a, 0x68, 0x02, 0x00, 0xb9, 0x20, 0x05, 0x00, 0x34 };
+    void* ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(search) / sizeof(*search));
+    if (!ent_loc) {
+        printf("%s: Could not find \"_MKBDeviceUnlockedSinceBoot\" patch\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"_MKBDeviceUnlockedSinceBoot\" patch loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
+    addr_t xref_stuff = (addr_t)find_last_insn_matching_64(0, kernel_buf, kernel_len, ent_loc, insn_is_bl_64);
+    if(!xref_stuff) {
+        printf("%s: Could not find \"_MKBDeviceUnlockedSinceBoot\" xref\n",__FUNCTION__);
+        return -1;
+    }
+    addr_t br_addr = (addr_t)find_br_address_with_bl_64(0, kernel_buf, kernel_len, xref_stuff);
+    if(!br_addr) {
+        printf("%s: Could not find \"_MKBDeviceUnlockedSinceBoot\" br_addr\n",__FUNCTION__);
+        return -1;
+    }
+    // nop -> mov w0, 0x1
+    // ldr x16, _MKBDeviceUnlockedSinceBoot -> ret
+    // br x16
+    br_addr = (addr_t)GET_OFFSET(kernel_len, br_addr);
+    xref_stuff = br_addr - 0x4; // step back to ldr x16, _MKBDeviceUnlockedSinceBoot
+    xref_stuff = xref_stuff - 0x4; // step back to nop
+    printf("%s: Found \"_MKBDeviceUnlockedSinceBoot\" beg_func at %p\n\n", __FUNCTION__,GET_OFFSET(kernel_len,xref_stuff));
+    printf("%s: Patching \"_MKBDeviceUnlockedSinceBoot\" at %p\n\n", __FUNCTION__,GET_OFFSET(kernel_len,xref_stuff));
+    // 1 is yes, 0 is no
+    *(uint32_t *) (kernel_buf + xref_stuff) = 0x52800020; // mov w0, 0x1
+    *(uint32_t *) (kernel_buf + xref_stuff + 0x4) = 0xD65F03C0; // ret
+    return 0;
+}
+
 // iOS 8 arm64
 int get__MKBGetDeviceLockState_patch_ios8(void* kernel_buf,size_t kernel_len) {
     // search c0 01 00 54 1f 05 00 71 a1 03 00 54 00 00 80 d2
     // .. heres what we are searching for
-    // cmp w0, #0
-    // cset w8, eq
-    // str w8, [x20]
-    // cbz w0, 0x100020038
+    // b.eq 0x100012394
+    // cmp w8, #0x1
+    // b.ne 0x1000123d8
+    // mov x0, #0
     // .. heres one line after
     // bl _MKBGetDeviceLockState
     // we need to find the insn matching bl and then find the sub the bl is calling
@@ -113,6 +156,139 @@ int get__MKBGetDeviceLockState_patch_ios8(void* kernel_buf,size_t kernel_len) {
     return 0;
 }
 
+// iOS 7 arm64
+int get_set_brick_state_patch_ios7(void* kernel_buf,size_t kernel_len) {
+    printf("%s: Entering ...\n",__FUNCTION__);
+    // search "_set_brick_state" str
+    // ... and heres some notable lines of code before that
+    // bl 0x10000f298
+    // cbnz w0, 0x10000c80c
+    // take note that we are searching by 00 94 and not A2 02 00 94 at the start
+    // this means to get to the next line we need to add 0x2 not 0x4
+    // we need to make bl 0x10000f298 a mov w0, 0x1
+    // because cbnz w0, 0x10000c80c is checking register w0
+    char* str = "_set_brick_state";
+    void* ent_loc = memmem(kernel_buf, kernel_len, str, sizeof(str));
+    if(!ent_loc) {
+        printf("%s: Could not find \"_set_brick_state\" string\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"_set_brick_state\" str loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
+    addr_t xref_stuff = xref64(kernel_buf,0,kernel_len,(addr_t)GET_OFFSET(kernel_len, ent_loc));
+    if(!xref_stuff) {
+       printf("%s: Could not find \"_set_brick_state\" xref\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"_set_brick_state\" xref at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
+    addr_t bl_addr = (addr_t)find_last_insn_matching_64(0, kernel_buf, kernel_len, xref_stuff, insn_is_bl_64);
+    if(!bl_addr) {
+        printf("%s: Could not find \"_set_brick_state\" bl addr\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Patching \"_set_brick_state\" at %p\n\n", __FUNCTION__,(void*)(bl_addr));
+    // 0xD503201F is nop
+    // https://cryptii.com/pipes/integer-encoder
+    // if you convert 1f2003D5 to a 32 bit unsigned integer in little endian https://archive.is/22JSe
+    // you will get d503201f as a result, which can be used after the = sign to make this a nop
+    // but this patch requires bl 0x10000caa4 to be mov w0, 0x1 which is 0x20 0x00 0x80 0x52 or 0x52800020 in little endian
+    *(uint32_t *) (kernel_buf + bl_addr) = 0x52800020; // mov w0, 0x1
+    return 0;
+}
+
+// iOS 8 arm64
+int get_dealwith_activation_patch_ios8(void* kernel_buf,size_t kernel_len) {
+    printf("%s: Entering ...\n",__FUNCTION__);
+    // search E1 63 00 91 E2 53 00 91 E0 03 13 AA
+    // add x1, sp, #0x18
+    // add x2, sp, #0x14
+    // mov x0, x19
+    // ... and heres two notable lines of code after that
+    // bl 0x10000caa4
+    // cbz w0, 0x10000c968
+    uint8_t search[] = { 0xE1, 0x63, 0x00, 0x91, 0xE2, 0x53, 0x00, 0x91, 0xE0, 0x03, 0x13, 0xAA };
+    void* ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(search) / sizeof(*search));
+    if (!ent_loc) {
+        printf("%s: Could not find \"dealwith_activation\" patch\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"dealwith_activation\" patch loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
+    addr_t xref_stuff = (addr_t)GET_OFFSET(kernel_len, ent_loc);
+    printf("%s: Found \"dealwith_activation\" xref at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
+    printf("%s: Patching \"dealwith_activation\" at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
+    // 0xD503201F is nop
+    // https://cryptii.com/pipes/integer-encoder
+    // if you convert 1f2003D5 to a 32 bit unsigned integer in little endian https://archive.is/22JSe
+    // you will get d503201f as a result, which can be used after the = sign to make this a nop
+    // but this patch requires bl 0x10000caa4 to be mov w0, 0x1 which is 0x20 0x00 0x80 0x52 or 0x52800020 in little endian
+    xref_stuff = xref_stuff + 0x4;
+    xref_stuff = xref_stuff + 0x4;
+    xref_stuff = xref_stuff + 0x4;
+    *(uint32_t *) (kernel_buf + xref_stuff) = 0x52800020;
+    return 0;
+}
+
+// iOS 8 arm64
+int get_handle_deactivate_patch_ios8(void* kernel_buf,size_t kernel_len) {
+    printf("%s: Entering ...\n",__FUNCTION__);
+    char* str = "handle_deactivate";
+    void* ent_loc = memmem(kernel_buf, kernel_len, str, sizeof(str));
+    if(!ent_loc) {
+        printf("%s: Could not find \"handle_deactivate\" string\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"handle_deactivate\" str loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
+    addr_t xref_stuff = xref64(kernel_buf,0,kernel_len,(addr_t)GET_OFFSET(kernel_len, ent_loc));
+    if(!xref_stuff) {
+       printf("%s: Could not find \"handle_deactivate\" xref\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"handle_deactivate\" xref at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
+    addr_t beg_func = bof64(kernel_buf,0,xref_stuff);
+    if(!beg_func) {
+       printf("%s: Could not find \"handle_deactivate\" funcbegin insn\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Patching \"handle_deactivate\" at %p\n\n", __FUNCTION__,(void*)(beg_func));
+    // 0xD503201F is nop
+    // https://cryptii.com/pipes/integer-encoder
+    // if you convert 1f2003D5 to a 32 bit unsigned integer in little endian https://archive.is/22JSe
+    // you will get d503201f as a result
+    *(uint32_t *) (kernel_buf + beg_func) = 0x52800000; // mov w0, 0x0
+    *(uint32_t *) (kernel_buf + beg_func + 0x4) = 0xD65F03C0; // ret
+    return 0;
+}
+
+// iOS 8 arm64
+int get_check_build_expired_patch_ios8(void* kernel_buf,size_t kernel_len) {
+    printf("%s: Entering ...\n",__FUNCTION__);
+    char* str = "check_build_expired";
+    void* ent_loc = memmem(kernel_buf, kernel_len, str, sizeof(str));
+    if(!ent_loc) {
+        printf("%s: Could not find \"check_build_expired\" string\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"check_build_expired\" str loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
+    addr_t xref_stuff = xref64(kernel_buf,0,kernel_len,(addr_t)GET_OFFSET(kernel_len, ent_loc));
+    if(!xref_stuff) {
+       printf("%s: Could not find \"check_build_expired\" xref\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"check_build_expired\" xref at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
+    addr_t beg_func = bof64(kernel_buf,0,xref_stuff);
+    if(!beg_func) {
+       printf("%s: Could not find \"check_build_expired\" funcbegin insn\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Patching \"check_build_expired\" at %p\n\n", __FUNCTION__,(void*)(beg_func));
+    // 0xD503201F is nop
+    // https://cryptii.com/pipes/integer-encoder
+    // if you convert 1f2003D5 to a 32 bit unsigned integer in little endian https://archive.is/22JSe
+    // you will get d503201f as a result
+    *(uint32_t *) (kernel_buf + beg_func) = 0x52800000; // mov w0, 0x0
+    *(uint32_t *) (kernel_buf + beg_func + 0x4) = 0xD65F03C0; // ret
+    return 0;
+}
+
 int main(int argc, char **argv) {
     
     printf("%s: Starting...\n", __FUNCTION__);
@@ -121,9 +297,12 @@ int main(int argc, char **argv) {
     
     if(argc < 4){
         printf("Usage: %s <lockdownd_in> <lockdownd_out> <args>\n",argv[0]);
-        printf("\t-u\t\tPatch _MKBDeviceUnlockedSinceBoot (iOS 8 Only)\n");
-        printf("\t-l\t\tPatch _MKBGetDeviceLockState (iOS 8 Only)\n");
-        
+        printf("\t-u\t\tPatch _MKBDeviceUnlockedSinceBoot (iOS 7& 8 Only)\n");
+        printf("\t-l\t\tPatch _MKBGetDeviceLockState (iOS 7& 8 Only)\n");
+        printf("\t-g\t\tPatch _set_brick_state (iOS 7 Only)\n");
+        printf("\t-b\t\tPatch dealwith_activation (iOS 8 Only)\n");
+        printf("\t-c\t\tPatch handle_deactivate (iOS 8 Only)\n");
+        printf("\t-d\t\tPatch check_build_expired (iOS 8 Only)\n");
         return 0;
     }
     
@@ -167,11 +346,28 @@ int main(int argc, char **argv) {
     for(int i=0;i<argc;i++) {
         if(strcmp(argv[i], "-u") == 0) {
             printf("Kernel: Adding _MKBDeviceUnlockedSinceBoot patch...\n");
+            get__MKBDeviceUnlockedSinceBoot_patch_ios7(kernel_buf,kernel_len);
             get__MKBDeviceUnlockedSinceBoot_patch_ios8(kernel_buf,kernel_len);
         }
         if(strcmp(argv[i], "-l") == 0) {
             printf("Kernel: Adding _MKBGetDeviceLockState patch...\n");
             get__MKBGetDeviceLockState_patch_ios8(kernel_buf,kernel_len);
+        }
+        if(strcmp(argv[i], "-g") == 0) {
+            printf("Kernel: Adding _set_brick_state patch...\n");
+            get_set_brick_state_patch_ios7(kernel_buf,kernel_len);
+        }
+        if(strcmp(argv[i], "-b") == 0) {
+            printf("Kernel: Adding dealwith_activation patch...\n");
+            get_dealwith_activation_patch_ios8(kernel_buf,kernel_len);
+        }
+        if(strcmp(argv[i], "-c") == 0) {
+            printf("Kernel: Adding handle_deactivate patch...\n");
+            get_handle_deactivate_patch_ios8(kernel_buf,kernel_len);
+        }
+        if(strcmp(argv[i], "-d") == 0) {
+            printf("Kernel: Adding check_build_expired patch...\n");
+            get_check_build_expired_patch_ios8(kernel_buf,kernel_len);
         }
     }
     
