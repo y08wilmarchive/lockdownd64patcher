@@ -29,8 +29,8 @@ int get__MKBDeviceUnlockedSinceBoot_patch_ios8(void* kernel_buf,size_t kernel_le
     // str w8, [x20]
     // cbz w0, 0x100020038
     // we need to step one line back and find the sub the bl is calling
-    uint8_t search[] = { 0x1F, 0x00, 0x00, 0x71, 0xE8, 0x17, 0x9F, 0x1A, 0x88, 0x02, 0x00, 0xB9, 0x60, 0x06, 0x00, 0x34 };
-    void* ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(search) / sizeof(*search));
+    uint8_t ios8[] = { 0x1F, 0x00, 0x00, 0x71, 0xE8, 0x17, 0x9F, 0x1A, 0x88, 0x02, 0x00, 0xB9, 0x60, 0x06, 0x00, 0x34 };
+    void* ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(ios8) / sizeof(*ios8));
     if (!ent_loc) {
         // search 14 00 80 d2 1f 00 00 31 e8 17 9f 1a 68 02 00 b9 20 05 00 34
         // .. heres one line before the ent_loc
@@ -42,8 +42,8 @@ int get__MKBDeviceUnlockedSinceBoot_patch_ios8(void* kernel_buf,size_t kernel_le
         // str w8, [x19]
         // cbz w0, 0x100027ad4
         // we need to step one line back and find the sub the bl is calling
-        search = { 0x14, 0x00, 0x80, 0xd2, 0x1f, 0x00, 0x00, 0x31, 0xe8, 0x17, 0x9f, 0x1a, 0x68, 0x02, 0x00, 0xb9, 0x20, 0x05, 0x00, 0x34 };
-        ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(search) / sizeof(*search));
+        uint8_t ios7[] = { 0x14, 0x00, 0x80, 0xd2, 0x1f, 0x00, 0x00, 0x31, 0xe8, 0x17, 0x9f, 0x1a, 0x68, 0x02, 0x00, 0xb9, 0x20, 0x05, 0x00, 0x34 };
+        ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(ios7) / sizeof(*ios7));
         if (!ent_loc) {
             printf("%s: Could not find \"_MKBDeviceUnlockedSinceBoot\" patch\n",__FUNCTION__);
             return -1;
