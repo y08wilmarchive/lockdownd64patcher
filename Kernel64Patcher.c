@@ -199,6 +199,48 @@ int get_ar_loadAndVerify_patch_ios8(void* kernel_buf,size_t kernel_len) {
     return 0;
 }
 
+// iOS 7 arm64
+int get_verify_ar_patch_ios7(void* kernel_buf,size_t kernel_len) {
+    printf("%s: Entering ...\n",__FUNCTION__); // e2030032e00315aae10314aa
+    // search e2 03 00 32 e0 03 15 aa e1 03 14 aa
+    // .. heres what we are searching for
+    // orr w2, wzr, #0x1
+    // mov x0, x21
+    // mov x1, x20
+    // .. and heres one line after
+    // bl _verify_ar
+    // we need to find the bl and patch the func it is calling to return 0x1
+    uint8_t search[] = { 0xe2, 0x03, 0x00, 0x32, 0xe0, 0x03, 0x15, 0xaa, 0xe1, 0x03, 0x14, 0xaa };
+    void* ent_loc = memmem(kernel_buf, kernel_len, search, sizeof(search) / sizeof(*search));
+    if (!ent_loc) {
+        printf("%s: Could not find \"verify_ar\" patch\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"verify_ar\" patch loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
+    addr_t bl_addr = (addr_t)find_last_insn_matching_64(0, kernel_buf, kernel_len, ent_loc, insn_is_bl_64);
+    if(!bl_addr) {
+        printf("%s: Could not find \"verify_ar\" bl addr\n",__FUNCTION__);
+        return -1;
+    }
+    addr_t br_addr = (addr_t)find_br_address_with_bl_64(0, kernel_buf, kernel_len, bl_addr);
+    if(!br_addr) {
+        printf("%s: Could not find \"verify_ar\" br_addr\n",__FUNCTION__);
+        return -1;
+    }
+    // nop -> mov w0, 0x1
+    // ldr x16, verify_ar -> ret
+    // br x16
+    br_addr = (addr_t)GET_OFFSET(kernel_len, br_addr);
+    addr_t xref_stuff = br_addr - 0x4; // step back to ldr x16, verify_ar
+    xref_stuff = xref_stuff - 0x4; // step back to nop
+    printf("%s: Found \"verify_ar\" beg_func at %p\n\n", __FUNCTION__,GET_OFFSET(kernel_len,xref_stuff));
+    printf("%s: Patching \"verify_ar\" at %p\n\n", __FUNCTION__,GET_OFFSET(kernel_len,xref_stuff));
+    // 1 is yes, 0 is no
+    *(uint32_t *) (kernel_buf + xref_stuff) = 0x52800020; // mov w0, 0x1
+    *(uint32_t *) (kernel_buf + xref_stuff + 0x4) = 0xD65F03C0; // ret
+    return 0;
+}
+
 // iOS 8 arm64
 int get_handle_deactivate_patch_ios8(void* kernel_buf,size_t kernel_len) {
     printf("%s: Entering ...\n",__FUNCTION__);
@@ -330,6 +372,7 @@ int main(int argc, char **argv) {
         }
         if(strcmp(argv[i], "-b") == 0) {
             printf("Kernel: Adding ar_loadAndVerify patch...\n");
+            get_verify_ar_patch_ios7(kernel_buf,kernel_len);
             get_ar_loadAndVerify_patch_ios8(kernel_buf,kernel_len);
         }
         if(strcmp(argv[i], "-c") == 0) {
