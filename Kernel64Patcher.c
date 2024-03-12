@@ -173,14 +173,14 @@ int get_set_brick_state_patch_ios7(void* kernel_buf,size_t kernel_len) {
         printf("%s: Could not find \"_set_brick_state\" string\n",__FUNCTION__);
         return -1;
     }
-    printf("%s: Found \"_set_brick_state\" str loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
-    addr_t xref_stuff = xref64(kernel_buf,0,kernel_len,(addr_t)GET_OFFSET(kernel_len, ent_loc));
-    if(!xref_stuff) {
-       printf("%s: Could not find \"_set_brick_state\" xref\n",__FUNCTION__);
+    printf("%s: Found \"_set_brick_state\" str loc at %p\n",__FUNCTION__,);
+    uint32_t* literal_ref = find_literal_ref_64(0, kernel_buf, kernel_len, (uint32_t*)kernel_buf, GET_OFFSET(kernel_len,ent_loc));
+    if(!literal_ref) {
+       printf("%s: Could not find \"_set_brick_state\" literal_ref\n",__FUNCTION__);
         return -1;
     }
-    printf("%s: Found \"_set_brick_state\" xref at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
-    addr_t bl_addr = (addr_t)find_last_insn_matching_64(0, kernel_buf, kernel_len, xref_stuff, insn_is_bl_64);
+    printf("%s: Found \"_set_brick_state\" literal_ref at %p\n\n", __FUNCTION__,(void*)(literal_ref));
+    addr_t bl_addr = (addr_t)find_last_insn_matching_64(0, kernel_buf, kernel_len, literal_ref, insn_is_bl_64);
     if(!bl_addr) {
         printf("%s: Could not find \"_set_brick_state\" bl addr\n",__FUNCTION__);
         return -1;
