@@ -200,7 +200,7 @@ int get_set_brick_state_patch_ios8(void* kernel_buf,size_t kernel_len) {
 int get_ar_loadAndVerify_patch_ios8(void* kernel_buf,size_t kernel_len) {
     printf("%s: Entering ...\n",__FUNCTION__);
     char* str = "ar_loadAndVerify";
-    void* ent_loc = memmem(kernel_buf, kernel_len, str, sizeof(str));
+    void* ent_loc = memmem(kernel_buf, kernel_len, str, sizeof(str) / sizeof(*str));
     if(!ent_loc) {
         printf("%s: Could not find \"ar_loadAndVerify\" string\n",__FUNCTION__);
         return -1;
