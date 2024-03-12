@@ -217,12 +217,12 @@ int get_verify_ar_patch_ios7(void* kernel_buf,size_t kernel_len) {
         return -1;
     }
     printf("%s: Found \"verify_ar\" patch loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
-    addr_t bl_addr = (addr_t)find_last_insn_matching_64(0, kernel_buf, kernel_len, ent_loc, insn_is_bl_64);
+    addr_t bl_addr = (addr_t)find_next_insn_matching_64(0, kernel_buf, kernel_len, ent_loc, insn_is_bl_64);
     if(!bl_addr) {
         printf("%s: Could not find \"verify_ar\" bl addr\n",__FUNCTION__);
         return -1;
     }
-    addr_t br_addr = (addr_t)find_GOT_stub_address_with_bl_64(0, kernel_buf, kernel_len, bl_addr);
+    addr_t br_addr = (addr_t)find_br_address_with_bl_64(0, kernel_buf, kernel_len, bl_addr);
     if(!br_addr) {
         printf("%s: Could not find \"verify_ar\" br_addr\n",__FUNCTION__);
         return -1;
@@ -231,8 +231,8 @@ int get_verify_ar_patch_ios7(void* kernel_buf,size_t kernel_len) {
     // ldr x16, verify_ar -> ret
     // br x16
     br_addr = (addr_t)GET_OFFSET(kernel_len, br_addr);
-    addr_t xref_stuff = br_addr;// - 0x4; // step back to ldr x16, verify_ar
-    //xref_stuff = xref_stuff - 0x4; // step back to nop
+    addr_t xref_stuff = br_addr - 0x4; // step back to ldr x16, verify_ar
+    xref_stuff = xref_stuff - 0x4; // step back to nop
     printf("%s: Found \"verify_ar\" beg_func at %p\n\n", __FUNCTION__,GET_OFFSET(kernel_len,xref_stuff));
     printf("%s: Patching \"verify_ar\" at %p\n\n", __FUNCTION__,GET_OFFSET(kernel_len,xref_stuff));
     // 1 is yes, 0 is no
