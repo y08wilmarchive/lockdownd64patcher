@@ -768,8 +768,24 @@ uint64_t find_br_address_with_bl_64(uint64_t region, uint8_t* kdata, size_t ksiz
         return 0;
     //PFLog("%s: BR address %p\n", __func__, (void *)((uint8_t*)instr - kdata + region));
     
+    // check if it's BR x16
+    if (insn_br_reg_xn_64(instr) != 16)
+        return 0;
     
     return instr;
+}
+
+uint64_t find_GOT_stub_address_with_bl_64(uint64_t region, uint8_t* kdata, size_t ksize, uint32_t *insn)
+{
+    // check if BL is specified
+    if (!insn_is_bl_64(insn))
+        return 0;
+    
+    // get address of GOT stub
+    uint8_t* address = (uint8_t *)insn + insn_bl_imm32_64(insn);
+    //PFLog("%s: address %p\n", __func__, (void *)(address - kdata + region));
+    
+    return address;
 }
 
 uint64_t find_printf_in_amfi_execve_hook(uint64_t region, uint8_t* kdata, size_t ksize)

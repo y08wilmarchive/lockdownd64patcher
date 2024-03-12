@@ -222,7 +222,7 @@ int get_verify_ar_patch_ios7(void* kernel_buf,size_t kernel_len) {
         printf("%s: Could not find \"verify_ar\" bl addr\n",__FUNCTION__);
         return -1;
     }
-    addr_t br_addr = (addr_t)find_br_address_with_bl_64(0, kernel_buf, kernel_len, bl_addr);
+    addr_t br_addr = (addr_t)find_GOT_stub_address_with_bl_64(0, kernel_buf, kernel_len, bl_addr);
     if(!br_addr) {
         printf("%s: Could not find \"verify_ar\" br_addr\n",__FUNCTION__);
         return -1;
