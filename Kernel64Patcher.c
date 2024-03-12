@@ -185,6 +185,7 @@ int get_set_brick_state_patch_ios7(void* kernel_buf,size_t kernel_len) {
         printf("%s: Could not find \"_set_brick_state\" bl addr\n",__FUNCTION__);
         return -1;
     }
+    bl_addr = (addr_t)GET_OFFSET(kernel_len, bl_addr);
     printf("%s: Patching \"_set_brick_state\" at %p\n\n", __FUNCTION__,(void*)(bl_addr));
     // 0xD503201F is nop
     // https://cryptii.com/pipes/integer-encoder
