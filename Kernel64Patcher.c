@@ -231,8 +231,8 @@ int get_verify_ar_patch_ios7(void* kernel_buf,size_t kernel_len) {
     // ldr x16, verify_ar -> ret
     // br x16
     br_addr = (addr_t)GET_OFFSET(kernel_len, br_addr);
-    addr_t xref_stuff = br_addr - 0x4; // step back to ldr x16, verify_ar
-    xref_stuff = xref_stuff - 0x4; // step back to nop
+    addr_t xref_stuff = br_addr;// - 0x4; // step back to ldr x16, verify_ar
+    //xref_stuff = xref_stuff - 0x4; // step back to nop
     printf("%s: Found \"verify_ar\" beg_func at %p\n\n", __FUNCTION__,GET_OFFSET(kernel_len,xref_stuff));
     printf("%s: Patching \"verify_ar\" at %p\n\n", __FUNCTION__,GET_OFFSET(kernel_len,xref_stuff));
     // 1 is yes, 0 is no
