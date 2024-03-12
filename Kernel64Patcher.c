@@ -173,7 +173,7 @@ int get_set_brick_state_patch_ios7(void* kernel_buf,size_t kernel_len) {
         printf("%s: Could not find \"_set_brick_state\" string\n",__FUNCTION__);
         return -1;
     }
-    printf("%s: Found \"_set_brick_state\" str loc at %p\n",__FUNCTION__,);
+    printf("%s: Found \"_set_brick_state\" str loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
     uint32_t* literal_ref = find_literal_ref_64(0, kernel_buf, kernel_len, (uint32_t*)kernel_buf, GET_OFFSET(kernel_len,ent_loc));
     if(!literal_ref) {
        printf("%s: Could not find \"_set_brick_state\" literal_ref\n",__FUNCTION__);
