@@ -207,7 +207,7 @@ int get_ar_loadAndVerify_patch_ios8(void* kernel_buf,size_t kernel_len) {
     }
     printf("%s: Found \"ar_loadAndVerify\" str loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
     uint32_t* literal_ref = find_literal_ref_64(0, kernel_buf, kernel_len, (uint32_t*)kernel_buf, GET_OFFSET(kernel_len,ent_loc));
-    if(!ar_loadAndVerify) {
+    if(!literal_ref) {
        printf("%s: Could not find \"ar_loadAndVerify\" literal_ref\n",__FUNCTION__);
         return -1;
     }
