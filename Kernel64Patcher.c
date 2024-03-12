@@ -359,7 +359,7 @@ int main(int argc, char **argv) {
         }
         if(strcmp(argv[i], "-b") == 0) {
             printf("Kernel: Adding ar_loadAndVerify patch...\n");
-            get_dealwith_activation_patch_ios8(kernel_buf,kernel_len);
+            get_ar_loadAndVerify_patch_ios8(kernel_buf,kernel_len);
         }
         if(strcmp(argv[i], "-c") == 0) {
             printf("Kernel: Adding handle_deactivate patch...\n");
