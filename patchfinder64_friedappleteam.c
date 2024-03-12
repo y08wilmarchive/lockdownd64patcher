@@ -768,9 +768,6 @@ uint64_t find_br_address_with_bl_64(uint64_t region, uint8_t* kdata, size_t ksiz
         return 0;
     //PFLog("%s: BR address %p\n", __func__, (void *)((uint8_t*)instr - kdata + region));
     
-    // check if it's BR x16
-    if (insn_br_reg_xn_64(instr) != 16)
-        return 0;
     
     return instr;
 }
