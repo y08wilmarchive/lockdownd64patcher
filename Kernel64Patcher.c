@@ -200,19 +200,20 @@ int get_set_brick_state_patch_ios8(void* kernel_buf,size_t kernel_len) {
 int get_ar_loadAndVerify_patch_ios8(void* kernel_buf,size_t kernel_len) {
     printf("%s: Entering ...\n",__FUNCTION__);
     char* str = "ar_loadAndVerify";
-    void* ent_loc = memmem(kernel_buf, kernel_len, str, sizeof(str) / sizeof(*str));
+    void* ent_loc = memmem(kernel_buf, kernel_len, str, sizeof(str));
     if(!ent_loc) {
         printf("%s: Could not find \"ar_loadAndVerify\" string\n",__FUNCTION__);
         return -1;
     }
     printf("%s: Found \"ar_loadAndVerify\" str loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
-    uint32_t* literal_ref = find_literal_ref_64(0, kernel_buf, kernel_len, (uint32_t*)kernel_buf, GET_OFFSET(kernel_len,ent_loc));
-    if(!literal_ref) {
-       printf("%s: Could not find \"ar_loadAndVerify\" literal_ref\n",__FUNCTION__);
+    addr_t xref_stuff = xref64(kernel_buf,0,kernel_len,(addr_t)GET_OFFSET(kernel_len, ent_loc));
+    if(!xref_stuff) {
+        printf("%s: Could not find \"ar_loadAndVerify\" xref\n",__FUNCTION__);
+        xref_stuff = xref64(kernel_buf,0,kernel_len,(addr_t)GET_OFFSET(kernel_len, ent_loc));
         return -1;
     }
-    printf("%s: Found \"ar_loadAndVerify\" literal_ref at %p\n\n", __FUNCTION__,(void*)(literal_ref));
-    addr_t beg_func = bof64(kernel_buf,0,literal_ref);
+    printf("%s: Found \"ar_loadAndVerify\" xref at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
+    addr_t beg_func = bof64(kernel_buf,0,xref_stuff);
     if(!beg_func) {
        printf("%s: Could not find \"ar_loadAndVerify\" funcbegin insn\n",__FUNCTION__);
         return -1;
