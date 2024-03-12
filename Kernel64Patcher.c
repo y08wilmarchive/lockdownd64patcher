@@ -300,7 +300,7 @@ int main(int argc, char **argv) {
         printf("\t-u\t\tPatch _MKBDeviceUnlockedSinceBoot (iOS 7& 8 Only)\n");
         printf("\t-l\t\tPatch _MKBGetDeviceLockState (iOS 7& 8 Only)\n");
         printf("\t-g\t\tPatch _set_brick_state (iOS 7& 8 Only)\n");
-        printf("\t-b\t\tPatch dealwith_activation (iOS 7& 8 Only)\n");
+        printf("\t-b\t\tPatch ar_loadAndVerify (iOS 7& 8 Only)\n");
         printf("\t-c\t\tPatch handle_deactivate (iOS 7& 8 Only)\n");
         printf("\t-d\t\tPatch check_build_expired (iOS 7& 8 Only)\n");
         return 0;
@@ -358,7 +358,7 @@ int main(int argc, char **argv) {
             get_set_brick_state_patch_ios7(kernel_buf,kernel_len);
         }
         if(strcmp(argv[i], "-b") == 0) {
-            printf("Kernel: Adding dealwith_activation patch...\n");
+            printf("Kernel: Adding ar_loadAndVerify patch...\n");
             get_dealwith_activation_patch_ios8(kernel_buf,kernel_len);
         }
         if(strcmp(argv[i], "-c") == 0) {
