@@ -255,18 +255,14 @@ int get_handle_deactivate_patch_ios8(void* kernel_buf,size_t kernel_len) {
         return -1;
     }
     printf("%s: Found \"handle_deactivate\" xref at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
-    xref_stuff = (addr_t)GET_OFFSET(kernel_len, xref_stuff);
     printf("%s: Patching \"handle_deactivate\" at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
-    xref_stuff = xref_stuff - 0x4;
-    xref_stuff = xref_stuff - 0x4;
-    xref_stuff = xref_stuff - 0x4;
-    xref_stuff = xref_stuff - 0x4;
+    xref_stuff = xref_stuff - 0x4; // step back to adrp x1, 0x100072000
+    xref_stuff = xref_stuff - 0x4; // step back to orr w0, wzr, #0x1
+    xref_stuff = xref_stuff - 0x4; // step back to cbnz x8, 0x10001d77c
+    xref_stuff = xref_stuff - 0x4; // step back to ldr x8, [x20, #0x28]
     *(uint32_t *) (kernel_buf + xref_stuff) = 0xd2800008; // mov x8, 0x0
-    xref_stuff = xref_stuff - 0x4;
-    // 0xD503201F is nop
-    // https://cryptii.com/pipes/integer-encoder
-    // if you convert 1f2003D5 to a 32 bit unsigned integer in little endian https://archive.is/22JSe
-    // you will get d503201f as a result
+    xref_stuff = xref_stuff - 0x4; // step back to tbnz w8, #0, 0x10001d77c
+    *(uint32_t *) (kernel_buf + xref_stuff) = 0xd503201f; // nop
     return 0;
 }
 
