@@ -267,6 +267,37 @@ int get_handle_deactivate_patch_ios8(void* kernel_buf,size_t kernel_len) {
 }
 
 // iOS 8 arm64
+int get_dealwith_activation_patch_ios8(void* kernel_buf,size_t kernel_len) {
+    printf("%s: Entering ...\n",__FUNCTION__);
+    char* str = "dealwith_activation";
+    void* ent_loc = memmem(kernel_buf, kernel_len, str, sizeof(str));
+    if(!ent_loc) {
+        printf("%s: Could not find \"dealwith_activation\" string\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"dealwith_activation\" str loc at %p\n",__FUNCTION__,GET_OFFSET(kernel_len,ent_loc));
+    addr_t xref_stuff = xref64(kernel_buf,0,kernel_len,(addr_t)GET_OFFSET(kernel_len, ent_loc));
+    if(!xref_stuff) {
+       printf("%s: Could not find \"dealwith_activation\" xref\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Found \"dealwith_activation\" xref at %p\n\n", __FUNCTION__,(void*)(xref_stuff));
+    addr_t beg_func = bof64(kernel_buf,0,xref_stuff);
+    if(!beg_func) {
+       printf("%s: Could not find \"dealwith_activation\" funcbegin insn\n",__FUNCTION__);
+        return -1;
+    }
+    printf("%s: Patching \"dealwith_activation\" at %p\n\n", __FUNCTION__,(void*)(beg_func));
+    // 0xD503201F is nop
+    // https://cryptii.com/pipes/integer-encoder
+    // if you convert 1f2003D5 to a 32 bit unsigned integer in little endian https://archive.is/22JSe
+    // you will get d503201f as a result
+    *(uint32_t *) (kernel_buf + beg_func) = 0x52800000; // mov w0, 0x0
+    *(uint32_t *) (kernel_buf + beg_func + 0x4) = 0xD65F03C0; // ret
+    return 0;
+}
+
+// iOS 8 arm64
 int get_check_build_expired_patch_ios8(void* kernel_buf,size_t kernel_len) {
     printf("%s: Entering ...\n",__FUNCTION__);
     char* str = "check_build_expired";
@@ -368,6 +399,7 @@ int main(int argc, char **argv) {
             printf("Kernel: Adding ar_loadAndVerify patch...\n");
             get_verify_ar_patch_ios7(kernel_buf,kernel_len);
             get_ar_loadAndVerify_patch_ios8(kernel_buf,kernel_len);
+            get_dealwith_activation_patch_ios8(kernel_buf,kernel_len);
         }
         if(strcmp(argv[i], "-c") == 0) {
             printf("Kernel: Adding handle_deactivate patch...\n");
