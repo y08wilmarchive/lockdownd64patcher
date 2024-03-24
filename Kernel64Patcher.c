@@ -166,7 +166,7 @@ int main(int argc, char **argv) {
         printf("Usage: %s <lockdownd_in> <lockdownd_out> <args>\n",argv[0]);
         printf("\t-u\t\tPatch _MKBDeviceUnlockedSinceBoot (iOS 7& 8 Only)\n");
         printf("\t-l\t\tPatch _MKBGetDeviceLockState (iOS 7& 8 Only)\n");
-        printf("\t-b\t\tPatch dealwith_activation (iOS 7& 8 Only)\n");
+        printf("\t-b\t\tPatch dealwith_activation (iOS 7 Only)\n");
         return 0;
     }
     
