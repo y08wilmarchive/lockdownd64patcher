@@ -14,6 +14,7 @@
 
 #define DEBUG_EXTENDED 1
 #define DEBUG_ENABLED 1
+#define __unused __attribute__ ((unused))
 
 #if DEBUG_EXTENDED
 #   define PFExtLog(...) printf(__VA_ARGS__)
